@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { useAuth } from '../auth/AuthContext'
-import { esAdmin } from '../config'
 
 export default function PostDetail({ post, onClose, onCambio, onCambioReacciones, onEditar }) {
-  const { user } = useAuth()
+  const { user, esAdmin } = useAuth()
   const [comentarios, setComentarios] = useState([])
   const [texto, setTexto] = useState('')
   const [cargando, setCargando] = useState(false)
@@ -285,7 +284,7 @@ export default function PostDetail({ post, onClose, onCambio, onCambioReacciones
           )}
         </div>
 
-        {esAdmin(user?.email) && (
+        {esAdmin && (
           <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             <button
               className="btn"

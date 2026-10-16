@@ -1,8 +1,7 @@
 import { useAuth } from '../auth/AuthContext'
-import { esAdmin } from '../config'
 
 export default function Navbar({ onLogin, onLogout, onPublicar, onRegistro }) {
-  const { user } = useAuth()
+  const { user, esAdmin } = useAuth()
   const nombre =
     user?.user_metadata?.nombre ||
     (user?.email ? user.email.split('@')[0] : '')
@@ -23,13 +22,13 @@ export default function Navbar({ onLogin, onLogout, onPublicar, onRegistro }) {
             <>
               <span className="avatar">
                 <span className="avatar-dot">{iniciales}</span>
-                {esAdmin(user.email) ? (
+                {esAdmin ? (
                   <em>Admin · {nombre}</em>
                 ) : (
                   <span>{nombre}</span>
                 )}
               </span>
-              {esAdmin(user.email) && (
+              {esAdmin && (
                 <button className="btn btn-primary" onClick={onPublicar}>
                   ＋ Subir trabajo
                 </button>

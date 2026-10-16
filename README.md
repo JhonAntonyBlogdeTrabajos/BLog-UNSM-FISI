@@ -9,6 +9,7 @@ Curso: **Teoría General de Sistemas** (IV ciclo) · Docente: **Ing. Dr. Alberto
 
 - Login con correo y contraseña (Supabase Auth)
 - Comentarios por publicación (solo usuarios autenticados)
+- Solo el administrador (la primera cuenta creada) publica y sube archivos
 - Subida de trabajos organizados en **3 unidades**:
   - Unidad I: 4 semanas
   - Unidad II: 4 semanas
@@ -35,7 +36,10 @@ Curso: **Teoría General de Sistemas** (IV ciclo) · Docente: **Ing. Dr. Alberto
 |---|---|
 | `VITE_SUPABASE_URL` | URL del proyecto de Supabase |
 | `VITE_SUPABASE_ANON_KEY` | Key publishable / anon |
-| `VITE_ADMIN_EMAIL` | Correo que podrá publicar y administrar trabajos |
+
+> **Administrador:** la primera cuenta registrada en el proyecto es admin
+> automáticamente y es la única que puede publicar y subir archivos. Ejecuta
+> `supabase/schema.sql` en el SQL Editor de Supabase para activar este mecanismo.
 
 ## Autor
 

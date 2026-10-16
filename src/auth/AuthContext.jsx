@@ -23,16 +23,41 @@ function mensajeAmigable(e) {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
+  const [esAdmin, setEsAdmin] = useState(false)
   const [cargando, setCargando] = useState(true)
+
+  function sincronizar(u) {
+    setUser(u ?? null)
+    setEsAdmin(false)
+    if (!u) return
+
+    supabase
+      .from('perfiles')
+      .select('es_admin')
+      .eq('id', u.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setEsAdmin(Boolean(data?.es_admin))
+      })
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null)
+      const u = data.session?.user ?? null
+      setUser(u)
+      if (u) {
+        supabase
+          .from('perfiles')
+          .select('es_admin')
+          .eq('id', u.id)
+          .maybeSingle()
+          .then(({ data }) => setEsAdmin(Boolean(data?.es_admin)))
+      }
       setCargando(false)
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
+      sincronizar(session?.user ?? null)
     })
 
     return () => listener?.subscription.unsubscribe()
@@ -79,7 +104,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, cargando, iniciarSesion, crearCuenta, cerrarSesion }}
+      value={{ user, esAdmin, cargando, iniciarSesion, crearCuenta, cerrarSesion }}
     >
       {children}
     </AuthContext.Provider>

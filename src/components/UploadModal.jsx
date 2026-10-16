@@ -12,28 +12,55 @@ function subirArchivo(carpeta, archivo) {
 }
 
 export default function UploadModal({ onClose, onPublicado, post = null }) {
-  const { user } = useAuth()
+  const { user, esAdmin } = useAuth()
   const esEdicion = Boolean(post)
-  const [form, setForm] = useState({
-    unidad: post?.unidad ?? 1,
-    semana: post?.semana ?? 1,
-    titulo: post?.titulo ?? '',
-    tipo: post?.tipo ?? TIPOS[0],
-    asignatura: post?.asignatura ?? 'Teoría General de Sistemas',
-    periodo: post?.periodo ?? '2026-II',
-    resumen: post?.resumen ?? '',
-    contenido: post?.contenido ?? '',
-    etiquetas: post?.etiquetas?.join(', ') ?? '',
-    archivo: null,
-    portada: null,
-    imagenes: [],
-    videos: [],
+  const [form, setForm] = useState(() => {
+    const unidad = post?.unidad ?? 1
+    const semanas = UNIDADES.find((u) => u.unidad === unidad)?.semanas ?? [1, 2, 3, 4]
+    return {
+      unidad,
+      semana: semanas.includes(post?.semana) ? post.semana : semanas[0],
+      titulo: post?.titulo ?? '',
+      tipo: post?.tipo ?? TIPOS[0],
+      asignatura: post?.asignatura ?? 'Teoría General de Sistemas',
+      periodo: post?.periodo ?? '2026-II',
+      resumen: post?.resumen ?? '',
+      contenido: post?.contenido ?? '',
+      etiquetas: post?.etiquetas?.join(', ') ?? '',
+      archivo: null,
+      portada: null,
+      imagenes: [],
+      videos: [],
+    }
   })
   const [cargando, setCargando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
 
+  if (!esAdmin) {
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <h2>Sin permisos</h2>
+          <p>Solo el administrador puede publicar y subir archivos.</p>
+          <div className="form-actions">
+            <button type="button" className="btn btn-primary" onClick={onClose}>
+              Entendido
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   function set(k, v) {
     setForm((f) => ({ ...f, [k]: v }))
+  }
+
+  const semanasDisponibles = UNIDADES.find((u) => u.unidad === Number(form.unidad))?.semanas ?? [1, 2, 3, 4]
+
+  function cambiarUnidad(unidad) {
+    const primeraSemana = UNIDADES.find((u) => u.unidad === unidad)?.semanas[0] ?? 1
+    setForm((f) => ({ ...f, unidad, semana: primeraSemana }))
   }
 
   async function enviar(e) {
@@ -41,6 +68,10 @@ export default function UploadModal({ onClose, onPublicado, post = null }) {
     setMensaje(null)
     if (!form.titulo.trim()) {
       setMensaje({ tipo: 'error', texto: 'El título es obligatorio.' })
+      return
+    }
+    if (!semanasDisponibles.includes(Number(form.semana))) {
+      setMensaje({ tipo: 'error', texto: 'Elige una semana válida para la unidad seleccionada.' })
       return
     }
     setCargando(true)
@@ -98,8 +129,6 @@ export default function UploadModal({ onClose, onPublicado, post = null }) {
     }
   }
 
-  const semanasDisponibles = UNIDADES.find((u) => u.unidad === Number(form.unidad))?.semanas ?? [1, 2, 3, 4]
-
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
@@ -108,7 +137,7 @@ export default function UploadModal({ onClose, onPublicado, post = null }) {
           <div className="form-grid">
             <div className="form-row">
               <label>Unidad</label>
-              <select value={form.unidad} onChange={(e) => set('unidad', Number(e.target.value))}>
+              <select value={form.unidad} onChange={(e) => cambiarUnidad(Number(e.target.value))}>
                 {UNIDADES.map((u) => (
                   <option key={u.unidad} value={u.unidad}>
                     Unidad {u.unidad} ({u.semanas.length} semanas)

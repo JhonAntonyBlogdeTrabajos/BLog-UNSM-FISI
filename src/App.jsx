@@ -248,7 +248,7 @@ export default function App() {
               <ul>
                 <li>Comentarios con inicio de sesión.</li>
                 <li>Aportes, preguntas y críticas constructivas.</li>
-                <li>Solo el autor publica y administra los trabajos.</li>
+                <li>Solo el administrador publica y administra los trabajos.</li>
               </ul>
             </div>
             <div className="about-card">

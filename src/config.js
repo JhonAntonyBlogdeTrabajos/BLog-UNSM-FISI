@@ -21,9 +21,3 @@ export const AUTOR = {
   docente: 'Ing. Dr. Alberto Alva Arévalo',
   periodo: '2026-II',
 }
-
-export const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || ''
-
-export function esAdmin(email) {
-  return typeof email === 'string' && ADMIN_EMAIL !== '' && email.toLowerCase() === ADMIN_EMAIL.toLowerCase()
-}

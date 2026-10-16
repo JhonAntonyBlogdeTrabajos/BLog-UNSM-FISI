@@ -34,6 +34,57 @@ create table if not exists public.comentarios (
 );
 
 -- ============================================================
+-- Perfiles: rol de administrador (solo la primera cuenta creada)
+-- ============================================================
+-- La primera cuenta registrada pasa a ser administrador
+-- automaticamente; las demas quedan como usuarios normales.
+create table if not exists public.perfiles (
+  id uuid primary key references auth.users (id) on delete cascade,
+  correo text not null,
+  es_admin boolean not null default false,
+  creado_en timestamptz not null default now()
+);
+
+alter table public.perfiles enable row level security;
+
+-- Cada usuario solo puede leer su propio perfil (para saber si es admin)
+drop policy if exists "leer_mi_perfil" on public.perfiles;
+create policy "leer_mi_perfil" on public.perfiles
+  for select using (auth.uid() = id);
+
+-- Trigger: al registrarse un nuevo usuario, si no existe ningun
+-- perfil todavia, ese usuario se convierte en administrador.
+create or replace function public.marcar_primer_usuario_admin()
+returns trigger
+language plpgsql security definer
+set search_path = public
+as $$
+begin
+  insert into public.perfiles (id, correo, es_admin)
+  values (
+    new.id,
+    new.email,
+    not exists (select 1 from public.perfiles)
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.marcar_primer_usuario_admin();
+
+-- Backfill: crear perfiles para usuarios ya existentes antes del trigger.
+-- El usuario mas antiguo queda como administrador.
+insert into public.perfiles (id, correo, es_admin)
+select id,
+       email,
+       (row_number() over (order by created_at) = 1)
+from auth.users
+on conflict (id) do nothing;
+
+-- ============================================================
 -- Row Level Security (RLS)
 -- ============================================================
 alter table public.publicaciones enable row level security;
@@ -44,18 +95,40 @@ drop policy if exists "lectura_publica_publicaciones" on public.publicaciones;
 create policy "lectura_publica_publicaciones" on public.publicaciones
   for select using (true);
 
--- Publicaciones: el autor crea y administra las suyas
+-- Publicaciones: solo el administrador publica, edita y elimina
 drop policy if exists "insert_autor_publicacion" on public.publicaciones;
-create policy "insert_autor_publicacion" on public.publicaciones
-  for insert with check (auth.jwt() ->> 'email' = autor_correo);
+drop policy if exists "solo_admin_inserta_publicacion" on public.publicaciones;
+create policy "solo_admin_inserta_publicacion" on public.publicaciones
+  for insert with check (
+    exists (
+      select 1 from public.perfiles p
+      where p.id = auth.uid() and p.es_admin = true
+    )
+  );
 
-drop policy if exists "update_autor_publicacion" on public.publicaciones;
-create policy "update_autor_publicacion" on public.publicaciones
-  for update using (auth.jwt() ->> 'email' = autor_correo);
+drop policy if exists "solo_admin_actualiza_publicacion" on public.publicaciones;
+create policy "solo_admin_actualiza_publicacion" on public.publicaciones
+  for update using (
+    exists (
+      select 1 from public.perfiles p
+      where p.id = auth.uid() and p.es_admin = true
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.perfiles p
+      where p.id = auth.uid() and p.es_admin = true
+    )
+  );
 
-drop policy if exists "delete_autor_publicacion" on public.publicaciones;
-create policy "delete_autor_publicacion" on public.publicaciones
-  for delete using (auth.jwt() ->> 'email' = autor_correo);
+drop policy if exists "solo_admin_elimina_publicacion" on public.publicaciones;
+create policy "solo_admin_elimina_publicacion" on public.publicaciones
+  for delete using (
+    exists (
+      select 1 from public.perfiles p
+      where p.id = auth.uid() and p.es_admin = true
+    )
+  );
 
 -- Comentarios: lectura publica
 drop policy if exists "lectura_publica_comentarios" on public.comentarios;
@@ -119,5 +192,12 @@ create policy "leer_archivos_publicos" on storage.objects
   for select using (bucket_id = 'archivos');
 
 drop policy if exists "subir_archivos_autenticados" on storage.objects;
-create policy "subir_archivos_autenticados" on storage.objects
-  for insert with check (bucket_id = 'archivos' and auth.role() = 'authenticated');
+drop policy if exists "solo_admin_sube_archivos" on storage.objects;
+create policy "solo_admin_sube_archivos" on storage.objects
+  for insert with check (
+    bucket_id = 'archivos' and auth.role() = 'authenticated'
+    and exists (
+      select 1 from public.perfiles p
+      where p.id = auth.uid() and p.es_admin = true
+    )
+  );
