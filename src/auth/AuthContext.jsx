@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../supabase'
+import { esAdminCorreo } from '../config'
 
 const AuthContext = createContext(null)
 
@@ -26,33 +27,27 @@ export function AuthProvider({ children }) {
   const [esAdmin, setEsAdmin] = useState(false)
   const [cargando, setCargando] = useState(true)
 
-  function sincronizar(u) {
-    setUser(u ?? null)
-    setEsAdmin(false)
-    if (!u) return
-
-    supabase
+  async function resolverEsAdmin(u) {
+    if (!u) return false
+    if (esAdminCorreo(u.email)) return true
+    const { data } = await supabase
       .from('perfiles')
       .select('es_admin')
       .eq('id', u.id)
       .maybeSingle()
-      .then(({ data }) => {
-        setEsAdmin(Boolean(data?.es_admin))
-      })
+    return Boolean(data?.es_admin)
+  }
+
+  function sincronizar(u) {
+    setUser(u ?? null)
+    resolverEsAdmin(u).then(setEsAdmin)
   }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user ?? null
       setUser(u)
-      if (u) {
-        supabase
-          .from('perfiles')
-          .select('es_admin')
-          .eq('id', u.id)
-          .maybeSingle()
-          .then(({ data }) => setEsAdmin(Boolean(data?.es_admin)))
-      }
+      resolverEsAdmin(u).then(setEsAdmin)
       setCargando(false)
     })
 

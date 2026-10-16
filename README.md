@@ -36,10 +36,11 @@ Curso: **Teoría General de Sistemas** (IV ciclo) · Docente: **Ing. Dr. Alberto
 |---|---|
 | `VITE_SUPABASE_URL` | URL del proyecto de Supabase |
 | `VITE_SUPABASE_ANON_KEY` | Key publishable / anon |
+| `VITE_ADMIN_EMAIL` | Correo administrador (respaldo garantizado) |
 
-> **Administrador:** la primera cuenta registrada en el proyecto es admin
-> automáticamente y es la única que puede publicar y subir archivos. Ejecuta
-> `supabase/schema.sql` en el SQL Editor de Supabase para activar este mecanismo.
+> **Administrador:** la primera cuenta registrada es admin automáticamente
+> (requiere ejecutar `supabase/schema.sql`). Además, el correo indicado en
+> `VITE_ADMIN_EMAIL` siempre tendrá permisos de administrador.
 
 ## Autor
 
